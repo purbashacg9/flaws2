@@ -12,27 +12,30 @@ def download_logs(aws_profile: str, s3_bucket: str, local_dir:str) -> int:
     local_dir: str - Directory where filew will be downloade 
     Returns number of files downloaded  
     """
-    # Set up a session using the given profile 
-    session = boto3.session.Session(profile_name=aws_profile)
-    s3 = session.resource('s3')  
-
-    # Create an instance of S3 Bucket 
-    bucket = s3.Bucket(s3_bucket) 
-    objects = bucket.objects.all()
-
-    # create a local directory by the same name as the S3 bucket name to store the downloaded files
-    if not os.path.exists(local_dir): 
-        os.makedirs(local_dir)
-
     files_downloaded = 0 
-    # Download the files in this bucket 
-    for obj in objects:
-        filename = obj.key.split('/')[-1]
-        filepath = os.path.join(local_dir, filename)
-        bucket.download_file(obj.key, filepath)
-        files_downloaded += 1 
-    
-    return files_downloaded        
+    try:
+        # Set up a session using the given profile 
+        session = boto3.session.Session(profile_name=aws_profile)
+        s3 = session.resource('s3')  
+        
+        # Create an instance of S3 Bucket 
+        bucket = s3.Bucket(s3_bucket) 
+        objects = bucket.objects.all()
+
+        # create a local directory by the same name as the S3 bucket name to store the downloaded files
+        if not os.path.exists(local_dir): 
+            os.makedirs(local_dir)
+        
+        # Download the files in this bucket 
+        for obj in objects:
+            filename = obj.key.split('/')[-1]
+            filepath = os.path.join(local_dir, filename)
+            bucket.download_file(obj.key, filepath)
+            files_downloaded += 1 
+    except Exception as e:  
+        print(e)
+
+    return files_downloaded                  
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
