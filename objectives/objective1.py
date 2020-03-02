@@ -4,13 +4,12 @@ import os
 
 def download_logs(aws_profile: str, s3_bucket: str, local_dir:str) -> int:
     """
-    Connects to S3 using the given AWS profile and download files from the given bucket
-    s3_bucket 
+    Connects to S3 using the given AWS profile and download files from the given bucket 
     aws_profile:: str - name of AWS profile to use for connecting to AWS. The profile should exist
     in credentials or config files in the AWS folder
     s3_bucket:: str - The bucket on S3 from where files will be downloaded  
-    local_dir: str - Directory where filew will be downloade 
-    Returns number of files downloaded  
+    local_dir:: str - Directory where filew will be downloade 
+    return:: int  - Number of files downloaded  
     """
     files_downloaded = 0 
     try:
@@ -39,7 +38,7 @@ def download_logs(aws_profile: str, s3_bucket: str, local_dir:str) -> int:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--profile_name", required=True, help="AWS credentials profile to use")
+    parser.add_argument("-p", "--profile", required=True, help="AWS credentials profile to use")
     parser.add_argument("-b", "--bucket", required=True, help="Name of S3 Bucket")
     parser.add_argument("-d", "--local_dir", required=True, 
                             help="Name of Directory where files will be downloaded. If directory does not exist it will be created"
@@ -51,4 +50,3 @@ if __name__ == "__main__":
     directory = args.get('local_dir')
     
     print(f'Number of files downloaded -> {download_logs(profile, bucket, directory)}')
-
