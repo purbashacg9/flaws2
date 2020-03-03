@@ -7,8 +7,8 @@ def download_logs(aws_profile: str, s3_bucket: str, local_dir:str) -> int:
     Connects to S3 using the given AWS profile and download files from the given bucket 
     aws_profile:: str - name of AWS profile to use for connecting to AWS. The profile should exist
     in credentials or config files in the AWS folder
-    s3_bucket:: str - The bucket on S3 from where files will be downloaded  
-    local_dir:: str - Directory where filew will be downloade 
+    s3_bucket:: str - The bucket on S3 containing files to be downloaded  
+    local_dir:: str - Directory where files are downloaded 
     return:: int  - Number of files downloaded  
     """
     files_downloaded = 0 

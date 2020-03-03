@@ -6,6 +6,8 @@ def combine_files(local_dir: str, file_format: str, output_file: str) -> None:
     """
     Reads all files (recursively) in 'local_dir' with format matching 'file_format', combines the files into a CSV.   
     Name of the CSV file is taken from output_file argument. 
+    NOTE - Objective3 uses jq for command line parsing. I used pandas to combine the files and extract the columns shown in Objective3. 
+    I also save the generated file as CSV in the current folder. 
     local_dir:: str - Directory containing the files to be combined. This is a relative path from the directory where the script is running. 
     file_format:: str - Only files of this type are combined for processing
 
@@ -50,7 +52,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Combine CloudTrail logs and generate a CSV for further analysis')
     parser.add_argument("-d", "--local_dir", required=True, help="Local directory that contains the files downloaded from S3 bucket")
     parser.add_argument("-f", "--file_format", required=True, help="Format of files to combine")
-    parser.add_argument("-o", "--output_file", required=True, help="Name of output file")
+    parser.add_argument("-o", "--output_file", required=True, help="Output file")
 
     args = vars(parser.parse_args())
     local_dir = args.get('local_dir')
