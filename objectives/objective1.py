@@ -4,12 +4,12 @@ import os
 
 def download_logs(aws_profile: str, s3_bucket: str, local_dir:str) -> int:
     """
-    Connects to S3 using the given AWS profile and download files from the given bucket 
-    aws_profile:: str - name of AWS profile to use for connecting to AWS. The profile should exist
-    in credentials or config files in the AWS folder
-    s3_bucket:: str - The bucket on S3 containing files to be downloaded  
-    local_dir:: str - Directory where files are downloaded 
-    return:: int  - Number of files downloaded  
+    Description: Connects to S3 using the given AWS profile and download files from the given bucket 
+    :param aws_profile: str: name of AWS profile to use for connecting to AWS. The profile should exist in credentials or config files 
+    in the AWS folder
+    :param s3_bucket: str: The bucket on S3 containing files to be downloaded  
+    :param local_dir: str: Directory where files are downloaded 
+    return: int: Number of files downloaded  
     """
     files_downloaded = 0 
     try:
@@ -50,3 +50,4 @@ if __name__ == "__main__":
     directory = args.get('local_dir')
     
     print(f'Number of files downloaded -> {download_logs(profile, bucket, directory)}')
+    

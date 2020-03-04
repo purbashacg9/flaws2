@@ -5,8 +5,8 @@ import json
 
 def access_target_account(aws_profile: str) -> None: 
     """
-    Access an account through an IAM role
-    aws_profile:: str - account whose credentials are not known but can be accessed using another IAM role
+    Description: Access an account through an IAM role
+    param aws_profile:str: account whose credentials are not known but can be accessed using another IAM role
     return: None 
     """
     try:
