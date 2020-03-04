@@ -5,15 +5,17 @@ from utils import check_ip_address
 from utils import get_permissions_for_role
 from utils import get_aws_ips
 
-def identify_credential_theft(input_file: str, aws_profile: str, event_name: str = None) -> None: 
+def identify_credential_theft(input_file: str, aws_profile: str, event_name: str = None) -> object: 
     """
-    Description: This function looks through the events in a CloudTrail event log and identifies events caused using stolen credentials. 
+    Description: The method looks through the events in a CloudTrail event log and identifies events caused using stolen credentials. 
     :param input_file: str: file containing CloudTrail logs 
     :param aws_profile: str: account whose credentials are not known but can be accessed using another IAM role
     :param event_name: str: CloudTrail event type, if provided only logs for this event type are going to be analyzed. 
-    :return: None 
+    :return: list: Return a list of 2-tuples containing pairs of IP addresses and role used in the hack
     """
+    # Read log file and load data into a pandas dataframe 
     data_to_process = pd.read_csv(input_file)
+    
     if event_name:
         data_to_process = data_to_process[data_to_process['eventName']==event_name]
 
@@ -43,13 +45,9 @@ def identify_credential_theft(input_file: str, aws_profile: str, event_name: str
                 if 'amazonaws.com' in service and not is_aws_ip:
                     suspected_credential_theft.append((row['sourceIPAddress'], role_name))      
     
-    if suspected_credential_theft:
-        for theft in suspected_credential_theft:
-            print(f'Suspected credential theft from IP Address {theft[0]} using role {theft[1]} for {event_name if event_name else "multiple events in log"}')
-    else:
-        print(f'No credential thefts identified  in  CloudTrail logs for {event_name if event_name else "multiple events in log"}')        
+    return suspected_credential_theft
     
-
+    
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Identify crdential theft from CloudTrail logs')
     parser.add_argument("-i", "--input_file", required=True, help="input file containing Cloudtrail logs")
@@ -61,4 +59,9 @@ if __name__ == "__main__":
     profile = args.get('profile')
     event_name = args.get('event')
     
-    identify_credential_theft(input_file, profile, event_name)    
+    suspected_credential_theft = identify_credential_theft(input_file, profile, event_name)    
+    if suspected_credential_theft:
+        for theft in suspected_credential_theft:
+            print(f'Suspected credential theft from IP Address {theft[0]} using role {theft[1]} for {event_name if event_name else "multiple events in log"}')
+    else:
+        print(f'No credential thefts identified  in  CloudTrail logs for {event_name if event_name else "multiple events in log"}')        
