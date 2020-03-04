@@ -59,3 +59,22 @@ def get_permissions_for_role(aws_profile: str, role_name: str) -> object:
                                     if statement.get("Action") == "sts:AssumeRole" and statement.get("Effect") == "Allow"
                                 ]
     return permitted_services
+
+
+def get_repository_policy(aws_profile: str, repository: str) -> object:
+    """
+    Description: Find repository policy for a given docker repository in AWS ECR.  
+    :param aws_profile: str: AWS profile name 
+    :param repository: str: Name of a repository in ECR  
+    :return: list: Return permissions for given repository  
+    """
+    repository_policy = [] 
+    session = boto3.session.Session(profile_name=aws_profile)
+    ecr = session.client('ecr')
+    response = ecr.get_repository_policy(repositoryName=repository)   
+    policy_text = json.loads(response.get('policyText'))
+    if policy_text:
+        policy_statements = policy_text.get('Statement')
+        if policy_statements: 
+            repository_policy = [policy.get('Principal') for policy in policy_statements]
+    return repository_policy
