@@ -1,69 +1,64 @@
 import argparse 
-import boto3 
-import ipaddress
 import json
 import pandas as pd 
+from utils import check_ip_address
+from utils import get_permissions_for_role
+from utils import get_aws_ips
 
-def check_ip_address(aws_addresses: object, ip_address_to_check: str) -> bool:
+def identify_credential_theft(input_file: str, aws_profile: str, event_name: str = None) -> None: 
     """
-    Given a list of IP address ranges beloging to Amazon, this function checks if the ip address specified in ip_address_to_check 
-    belongs to Amazon. 
-    aws_addresses::list - List of IP Address CIDR ranges belonging to AWS
-    ip_address_to_check::str - IP address 
-    return:: bool - True if ip_address_to_check is an AWS address. 
+    Description: This function looks through the events in a CloudTrail event log and identifies events caused using stolen credentials. 
+    :param input_file: str: file containing CloudTrail logs 
+    :param aws_profile: str: account whose credentials are not known but can be accessed using another IAM role
+    :param event_name: str: CloudTrail event type, if provided only logs for this event type are going to be analyzed. 
+    :return: None 
     """
-    for aws_address in aws_addresses:
-        if ipaddress.ip_address(ip_address_to_check) in ipaddress.ip_network(aws_address): 
-            return True
-    return False 
-
-def identify_credential_theft(input_file: str, event_name: str = None) -> None: 
-    #filename = os.path.join()
     data_to_process = pd.read_csv(input_file)
-    #print(data_to_process.shape)
     if event_name:
         data_to_process = data_to_process[data_to_process['eventName']==event_name]
-    #print(data_to_process.shape)
 
-    with open('ip-ranges.json') as aws_ips_file:
-        ip_data = json.load(aws_ips_file) #pd.read_json('ip-ranges.json', orient='')
-    
-    ip_prefixes = ip_data.get('prefixes')
-    #print(ip_prefixes[0])
+    # For credential theft, we only look at events not originating from AWS's own services. 
+    data_to_process = data_to_process[data_to_process['userIdentityType'] != 'AWSService']
 
-    aws_ip_df = pd.DataFrame(data=ip_prefixes, columns=['ip_prefix', 'region', 'service'])
-    # print(aws_ip_df.head())
-    # print(aws_ip_df.shape)
-    # As specified here - https://docs.aws.amazon.com/general/latest/gr/aws-ip-ranges.html#aws-ip-download
-    # Specify AMAZON to get all IP address ranges. 
-    all_aws_ip_addresses = aws_ip_df[aws_ip_df['service']=='AMAZON'].ip_prefix.to_list()
-    # print(all_aws_ip_addresses.head())
-    # print(all_aws_ip_addresses.shape)
+    data_to_process = data_to_process[(data_to_process['userIdentityType'] != 'AWSAccount') & 
+                                        (data_to_process['userIdentityAccountId'] != 'ANONYMOUS_PRINCIPAL')]
 
-    suspect_ip_addresses = [] 
-    suspect_arns = [] 
+    all_aws_ip_addresses = get_aws_ips('ip-ranges.json')
+
+    suspected_credential_theft = []   
     for index, row in data_to_process.iterrows(): 
         # Only look at events with userIdentityType AssumedRole as described here 
         # https://netflixtechblog.com/netflix-cloud-security-detecting-credential-compromise-in-aws-9493d6fd373a. 
-        # This also filters out the  valid events originating from AWSService or AWSAccount. 
         if row['userIdentityType'] == 'AssumedRole': 
-            suspect_ip_addresses.append(row['sourceIPAddress'])
-            
-            suspect_arns.append(row['userIdentityArn'])
+            # Extract role name from USerIdentity.arn. 
+            # NOTE - The ARN format for user identities of type AssumedRoles is 
+            # arn:aws:sts::653711331788:assumed-role/level3/d190d14a-2404-45d6-9113-4eda22d7f2c7
+            role = row['userIdentityArn'].split(':')
+            role_name = role[-1].split("/")[1]
+            permitted_services = get_permissions_for_role(aws_profile, role_name)
 
+            is_aws_ip = check_ip_address(all_aws_ip_addresses, row['sourceIPAddress'])
 
-
-    print(suspect_arns, suspect_ip_addresses)
+            for service in permitted_services:
+                if 'amazonaws.com' in service and not is_aws_ip:
+                    suspected_credential_theft.append((row['sourceIPAddress'], role_name))      
+    
+    if suspected_credential_theft:
+        for theft in suspected_credential_theft:
+            print(f'Suspected credential theft from IP Address {theft[0]} using role {theft[1]} for {event_name if event_name else "multiple events in log"}')
+    else:
+        print(f'No credential thefts identified  in  CloudTrail logs for {event_name if event_name else "multiple events in log"}')        
+    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Identify crdential theft from CloudTrail logs')
     parser.add_argument("-i", "--input_file", required=True, help="input file containing Cloudtrail logs")
-    parser.add_argument("-e", "--event", required=False, 
-                            help="This is an event name as captured by CloudTrail. Optional, if not provided, all events in the log are scanned"
-                        )
-
+    parser.add_argument("-p", "--profile", required=True, help="AWS credentials profile to use")
+    parser.add_argument("-e", "--event", required=False, help="Event name as captured by CloudTrail. If absent, all events in log are scanned")
+    
     args = vars(parser.parse_args())
     input_file = args.get('input_file')
+    profile = args.get('profile')
     event_name = args.get('event')
     
-    identify_credential_theft(input_file, event_name)    
+    identify_credential_theft(input_file, profile, event_name)    
